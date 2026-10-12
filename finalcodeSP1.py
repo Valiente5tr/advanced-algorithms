@@ -780,7 +780,7 @@ def mostrarCadenaMasLarga(wuhan, texas):
     L, iw, it = subcadenaComunMasLarga(wuhan, texas)
     print("Cadena mas larga sin diferencias:", L, "bases")
     print("  Wuhan:", iw + 1, "-", iw + L, "| Texas:", it + 1, "-", it + L)
-    print(wuhan[iw:iw + L])
+    print("Primero 50 caracteres", wuhan[iw:iw + 50])
 
 #funciones de control de ejecucion
 def ejecutarGenes(genes, genoma):
@@ -815,6 +815,8 @@ def ejecutarPalindromos(genes):
 
         with open(nombreArchivo, "w") as archivo:
             archivo.write(palindromo)
+        print("Se guardo en: ", nombreArchivo)
+        print()
 def ejecutarProteinas(proteinas, traducciones):
 
     print("PUNTO 3 - PROTEINAS")
