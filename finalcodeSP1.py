@@ -700,7 +700,6 @@ def mostrarDiferencias(diferencias):
                 resultado = "aminoacido diferente"
             print("  Codon Wuhan:", d["codonW"], "(" + d["aaW"] + ") | Codon Texas:", d["codonT"], "(" + d["aaT"] + ") ->", resultado)
         print()
-#posible uso de funcion mas eficiente (ELIMINAR EN CASO DE NO TOMARLO SI LO TOMAMOS DEBEMOS DE MODIFICAR MOSTRAR CADENA PARA USO XD)
 def cadenaMasLargaAlineada(wuhan,texas,diferencias):
     #Se busca la cadena consecutiva mas larga sin diferencias considerando que el alineamiento ya fue calculado
     #COMPLEJIDAD o(n) considerando n como la cantidad de diferencias encontradas
@@ -747,6 +746,7 @@ def cadenaMasLargaAlineada(wuhan,texas,diferencias):
         mejorInicioT = cursorT
 
     return (mejorLongitud,mejorInicioW,mejorInicioT)
+#Primer caso para Encontrar cadena mas larga (Desechado)
 def subcadenaComunMasLarga(s1, s2):
     #SOLUCION GENERAL
     # Longest common substring con programacion dinamica.
@@ -775,9 +775,9 @@ def subcadenaComunMasLarga(s1, s2):
         prev = current
     # inicio = fin - longitud (base 0)
     return mejor, finS1 - mejor, finS2 - mejor
-def mostrarCadenaMasLarga(wuhan, texas):
+def mostrarCadenaMasLarga(wuhan, texas, diferencias):
     # Imprime la cadena mas larga sin diferencias. Complejidad: O(n * m) por la DP
-    L, iw, it = subcadenaComunMasLarga(wuhan, texas)
+    L, iw, it = cadenaMasLargaAlineada(wuhan, texas, diferencias)
     print("Cadena mas larga sin diferencias:", L, "bases")
     print("  Wuhan:", iw + 1, "-", iw + L, "| Texas:", it + 1, "-", it + L)
     print("Primero 50 caracteres", wuhan[iw:iw + 50])
@@ -851,7 +851,7 @@ def ejecutarComparacion(wuhan,texas,genes,proteinas,traducciones,tablaCodones,k,
         analizarDiferencia(diferencia,wuhan,texas,posicionesGenes,rangos,tablaCodones)
 
     mostrarDiferencias(diferencias)
-    mostrarCadenaMasLarga(wuhan,texas)
+    cadenaMasLargaAlineada(wuhan,texas, diferencias)
 
 
 def main():

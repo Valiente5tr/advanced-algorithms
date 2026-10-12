@@ -245,7 +245,7 @@ class InterfazResultados:
 
     def proceso_cadena_mas_larga(self):
         try:
-            L, inicioW, inicioT = sp.subcadenaComunMasLarga(self.wuhan, self.texas)
+            L, inicioW, inicioT = sp.cadenaMasLargaAlineada(self.wuhan, self.texas, self.diferencias)
             primeros50 = self.wuhan[inicioW:inicioW + min(50, L)]
 
             self.root.after(
