@@ -1,5 +1,9 @@
-#Funciones generales
+#Configuracion general
 FRAMESHIFT = 13467 # Posicion base 0 donde ocurre el frameshift de ORF1ab
+#posicion biologica 13468
+
+
+#Funciones generales
 def leerFASTA(lecturearchive):
     #Complejidad de tiempo: O(n)
     # Se recorren una sola vez todos los caracteres del archivo.
@@ -17,7 +21,9 @@ def leerFASTA(lecturearchive):
         for linea in archivo:
 
             linea = linea.strip() #strip para quitar salto de linea o espacio
-            lineasSecuencia.append(linea) #se limpia y se añade a lista
+            #en caso de alguna linea vacia 
+            if linea != "":
+                lineasSecuencia.append(linea) #se limpia y se añade a lista
 
         secuencia = "".join(lineasSecuencia) #se unen todas las lineas para dejar una sola cadena
         # de ["ATGC", "TTAC", "GGAA"] a "ATGCTTACGGAA"
@@ -162,6 +168,9 @@ def preprocess(cadena):
     resultado += "#$"
     return resultado
 def check(char1, char2):
+    #PODEMOS UTILIZAR UN DICCIONARIO
+    #Comprobacion si dos caracteres son complementarios
+    #A-T  y G-C pares en ADN
     match char1:
         case "A":
             if char2 == "T":
@@ -188,6 +197,9 @@ def check(char1, char2):
         case _:
             return False
 def manacher(cadena):
+    #Complejidad de tiempo: O(n)
+    #Complejidad de espacio: O(n)
+    #El arreglo p almacena el radio del palindromo encontrado alrededor de cada posicion.
     cadena_t = preprocess(cadena)
     n = len(cadena_t)
 
@@ -241,6 +253,8 @@ def traducirMarco(secuencia, desplazamiento, tablaCodones):
 
     return aminoacidos, informacionCodones
 def complementoInverso(secuencia):
+    # Complejidad de tiempo: O(n)
+    # Complejidad de espacio: O(n)
 
     complemento = {"A": "T","T": "A","C": "G","G": "C"} #Bases complementarias para el ADN
     secuenciaComplementaria = [] #construccion complementaria
@@ -307,7 +321,7 @@ def traducirORF1abConFrameshift(genoma, tablaCodones):
 
     # Las coordenadas de ORF1ab en el archivo biologico
     inicioORF = 265
-    posicionFrameshift = 13467
+    posicionFrameshift = FRAMESHIFT
     finORF = 21554
 
     #construccion manual
@@ -483,26 +497,30 @@ def mostrarResultado(resultado):
 
 #Funciones para COMPARACION
 def computeLPS(pattern, M, lps):
-    len = 0
+    # Complejidad de tiempo: O(m)
+    # Complejidad de espacio adicional: O(1)
+    longitud = 0
     lps[0] = 0
     i = 1
 
     while i < M:
-        if pattern[i]==pattern[len]:
-            len += 1
-            lps[i] = len
+        if pattern[i]==pattern[longitud]:
+            longitud += 1
+            lps[i] = longitud
             i += 1
         else:
-            if len != 0:
-                len = lps[len - 1]
+            if longitud != 0:
+                longitud = lps[longitud - 1]
             else:
                 lps[i] = 0
                 i += 1
 def searchIndices(pattern, txt):
-    # Copia de search() de lectura.py, pero devuelve resultado en lugar de solo imprimir
     # Complejidad de tiempo: O(n + m). Espacio: O(m) del arreglo LPS
     M = len(pattern)
     N = len(txt)
+
+    if M == 0:
+        return []
 
     lps = [0]*M
     j = 0
@@ -542,6 +560,11 @@ def anclar(wuhan, texas, k):
     # Si el k-mer de Texas en s esta en Wuhan en p, texas[0] corresponde a wuhan[p - s].
     # Complejidad: O(n + m) por k-mer probado
     for s in range(0, len(texas) - k, k):
+        kmer = texas[s:s + k]
+        #ignorar regiones con bases ambiguas
+        if "N" in kmer:
+            continue
+
         encontrados = searchIndices(texas[s:s + k], wuhan)
         if len(encontrados) > 0:
             desfase = encontrados[0][0] - s
@@ -568,6 +591,8 @@ def compararGenomas(wuhan, texas, k, ventana):
     # Recorre ambos genomas alineados y regresa la lista de diferencias:
     # {posW, posT, baseW, baseT, extremo}
     # Complejidad: O(n + m) en el recorrido + O(ventana) por cada indel
+    # Cuando aparece una posible insercion o delecion se realiza
+    # una busqueda adicional dentro de una ventana limitada.
     ancla = anclar(wuhan, texas, k)
     if ancla is None:
         return []
@@ -613,7 +638,8 @@ def compararGenomas(wuhan, texas, k, ventana):
 
     return diferencias
 def rangosProteinas(proteinas, traducciones):
-    # Usa el resultado de buscarProteina para obtener el rango de cada proteina en el genoma (hebra directa, marcos normales; ORF1AB con frameshift se maneja con genes). Regresa (inicio, fin) en base 0.
+    # Usa el resultado de buscarProteina para obtener el rango de cada proteina en el genoma (hebra directa, marcos normales; 
+    # ORF1AB con frameshift se maneja con genes). Regresa (inicio, fin) en base 0.
     # Complejidad: O(n + m) cada una
     rangos = []
     for proteina in proteinas:
@@ -647,6 +673,12 @@ def analizarDiferencia(d, wuhan, texas, genes, rangos, tabla):
         return d
     ic = inicio + 3 * ((d["posW"] - inicio) // 3)
     inicioT = d["posT"] - (d["posW"] - ic)   # mismo codon en Texas
+
+    codonW = wuhan[ic:ic + 3]
+    codonT = texas[inicioT:inicioT + 3]
+    if len(codonW) != 3 or len(codonT) != 3: #comprobacion de que se encuentran completos
+            return d
+
     d["codonW"] = wuhan[ic:ic + 3]
     d["codonT"] = texas[inicioT:inicioT + 3]
     d["aaW"] = tabla.get(d["codonW"], "X")   # X: codon con bases ambiguas (N, etc.)
@@ -668,7 +700,55 @@ def mostrarDiferencias(diferencias):
                 resultado = "aminoacido diferente"
             print("  Codon Wuhan:", d["codonW"], "(" + d["aaW"] + ") | Codon Texas:", d["codonT"], "(" + d["aaT"] + ") ->", resultado)
         print()
+#posible uso de funcion mas eficiente (ELIMINAR EN CASO DE NO TOMARLO SI LO TOMAMOS DEBEMOS DE MODIFICAR MOSTRAR CADENA PARA USO XD)
+def cadenaMasLargaAlineada(wuhan,texas,diferencias):
+    #Se busca la cadena consecutiva mas larga sin diferencias considerando que el alineamiento ya fue calculado
+    #COMPLEJIDAD o(n) considerando n como la cantidad de diferencias encontradas
+    cursorW = 0
+    cursorT = 0
+    mejorLongitud = 0
+    mejorInicioW = 0
+    mejorInicioT = 0
+
+    for diferencia in diferencias:
+        posW = diferencia["posW"]
+        posT = diferencia["posT"]
+        longitudW = posW - cursorW #misma candtidad de bases iguales desde la ultima diferencia
+        longitudT = posT - cursorT
+        longitudActual = min(longitudW, longitudT) #como estan alineados el tramo debe de estar en ambos
+
+        if longitudActual > mejorLongitud: #en caso de cadena mayor guardamos su posicion
+            mejorLongitud = longitudActual
+            mejorInicioW = cursorW
+            mejorInicioT = cursorT
+
+        #Insercion en Texas:
+        #Wuhan no consume ninguna base.
+        if diferencia["baseW"] == "-":
+            cursorW = posW
+            cursorT = (posT + len(diferencia["baseT"]))
+
+        # Delecion en Texas y avanzamos las bases correspondientes en Wuhan.
+        elif diferencia["baseT"] == "-":
+            cursorW = (posW + len(diferencia["baseW"]))
+            cursorT = posT
+        else: #ambos genomas toman bases
+            cursorW = (posW+ len(diferencia["baseW"]))
+            cursorT = (posT+ len(diferencia["baseT"]))
+
+    #Despues de la ultima diferencia todavia puedeexistir la cadena sin cambios mas larga.
+    longitudW = len(wuhan) - cursorW
+    longitudT = len(texas) - cursorT
+    longitudActual = min(longitudW, longitudT)
+
+    if longitudActual > mejorLongitud:
+        mejorLongitud = longitudActual
+        mejorInicioW = cursorW
+        mejorInicioT = cursorT
+
+    return (mejorLongitud,mejorInicioW,mejorInicioT)
 def subcadenaComunMasLarga(s1, s2):
+    #SOLUCION GENERAL
     # Longest common substring con programacion dinamica.
     # Recurrencia: T[i][j] = 1 + T[i-1][j-1] si s1[i-1] == s2[j-1], 0 en otro caso.
     # Complejidad de tiempo: O(n * m)  (1-2 minutos con genomas de 30,000 bases)
