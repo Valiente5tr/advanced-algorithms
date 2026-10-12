@@ -106,8 +106,8 @@ class InterfazResultados:
         self.botonCadena = ttk.Button(marcoSuperior,text="Calcular cadena mas larga",command=self.calcular_cadena_mas_larga, state="disabled")
         self.botonCadena.pack(side="right")
 
-        columnas = ( "Indice Wuhan", "Indice Texas", "Cambio", "Codon Wuhan", "AA Wuhan", "Codon Texas","AA Texas", "Resultado")
-        anchos = { "Indice Wuhan": 110,"Indice Texas": 110,"Cambio": 220,"Codon Wuhan": 110, "AA Wuhan": 90,"Codon Texas": 110,  "AA Texas": 90,"Resultado": 180}
+        columnas = ( "Indice Wuhan", "Indice Texas", "Cambio","Frame", "Codon Wuhan", "AA Wuhan", "Codon Texas","AA Texas", "Resultado")
+        anchos = { "Indice Wuhan": 110,"Indice Texas": 110,"Cambio": 220,"Frame": 70,"Codon Wuhan": 110, "AA Wuhan": 90,"Codon Texas": 110,  "AA Texas": 90,"Resultado": 180}
         self.tablaComparacion = self.crear_treeview(self.tabComparacion, columnas, anchos)
 
         self.infoCadena = ttk.Label( self.tabComparacion,text="Cadena mas larga sin diferencias: pendiente",justify="left",font=("Consolas", 10) )
@@ -183,36 +183,79 @@ class InterfazResultados:
             self.diferencias = sp.compararGenomas( self.wuhan,  self.texas,  K, VENTANA)
 
             for diferencia in self.diferencias:
-                sp.analizarDiferencia(diferencia, self.wuhan, self.texas,  posicionesGenes,  rangos, tablaCodones)
-
-                if diferencia["codonW"] is None:
-                    codonW = "-"
-                    aaW = "-"
-                    codonT = "-"
-                    aaT = "-"
-                    resultadoTexto = "Sin codon identificado"
-                else:
-                    codonW = diferencia["codonW"]
-                    aaW = diferencia["aaW"]
-                    codonT = diferencia["codonT"]
-                    aaT = diferencia["aaT"]
-                    resultadoTexto = (
-                        "Mismo aminoacido"
-                        if aaW == aaT
-                        else "Aminoacido diferente"
-                    )
+                esSustitucion = (
+                    not diferencia["extremo"]
+                    and len(diferencia["baseW"]) == 1
+                    and len(diferencia["baseT"]) == 1
+                    and diferencia["baseW"] != "-"
+                    and diferencia["baseT"] != "-"
+                )
 
                 cambio = diferencia["baseW"] + " -> " + diferencia["baseT"]
 
-                self.tablaComparacion.insert( "", "end",
-                    values=(
-                        diferencia["posW"] + 1,
-                        diferencia["posT"] + 1,
-                        cambio,codonW,
-                        aaW,codonT,
-                        aaT,resultadoTexto
+                if not esSustitucion:
+
+                    self.tablaComparacion.insert(
+                        "",
+                        "end",
+                        values=(
+                            diferencia["posW"],
+                            diferencia["posT"],
+                            cambio,
+                            "-",
+                            "-",
+                            "-",
+                            "-",
+                            "-",
+                            "Indel / extremo"
+                        )
                     )
-                )
+
+                    continue
+
+                desfase = diferencia["posT"] - diferencia["posW"]
+
+                for frame in range(3):
+
+                    inicioCodonW = diferencia["posW"] - (
+                        (diferencia["posW"] - frame) % 3
+                    )
+
+                    inicioCodonT = inicioCodonW + desfase
+
+                    if inicioCodonW < 0 or inicioCodonT < 0:
+                        continue
+
+                    codonW = self.wuhan[inicioCodonW:inicioCodonW + 3]
+                    codonT = self.texas[inicioCodonT:inicioCodonT + 3]
+
+                    if len(codonW) != 3 or len(codonT) != 3:
+                        continue
+
+                    aaW = tablaCodones.get(codonW, "X")
+                    aaT = tablaCodones.get(codonT, "X")
+
+                    if aaW == aaT:
+                        resultadoTexto = "Mismo aminoacido"
+                    else:
+                        resultadoTexto = "Aminoacido diferente"
+
+                    self.tablaComparacion.insert(
+                        "",
+                        "end",
+                        values=(
+                            diferencia["posW"],
+                            diferencia["posT"],
+                            cambio,
+                            frame,
+                            codonW,
+                            aaW,
+                            codonT,
+                            aaT,
+                            resultadoTexto
+                        )
+                    )
+
 
             self.infoComparacion.config(
                 text=(
