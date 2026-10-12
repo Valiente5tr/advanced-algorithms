@@ -684,21 +684,43 @@ def analizarDiferencia(d, wuhan, texas, genes, rangos, tabla):
     d["aaW"] = tabla.get(d["codonW"], "X")   # X: codon con bases ambiguas (N, etc.)
     d["aaT"] = tabla.get(d["codonT"], "X")
     return d
-def mostrarDiferencias(diferencias):
-    # Imprime indice, codones afectados y aminoacido de cada version. Complejidad: O(d)
+def mostrarDiferencias(diferencias, wuhan, texas, tabla):
+    # Imprime cada sustitucion en los 3 marcos de lectura (formato base 0).
+    # El codon de un frame f que contiene a pos empieza en pos - ((pos - f) % 3).
+    # Complejidad: O(d)
     print("Diferencias entre Wuhan 2019 y Texas 2020")
     print("Total de diferencias:", len(diferencias))
     print()
+
     for d in diferencias:
-        print("Indice", d["posW"] + 1, "(Wuhan) /", d["posT"] + 1, "(Texas):", d["baseW"], "->", d["baseT"])
-        if d["codonW"] is None:
-            print("  Fuera de una region codificante: no produce aminoacido")
-        else:
-            if d["aaW"] == d["aaT"]:
-                resultado = "mismo aminoacido"
-            else:
-                resultado = "aminoacido diferente"
-            print("  Codon Wuhan:", d["codonW"], "(" + d["aaW"] + ") | Codon Texas:", d["codonT"], "(" + d["aaT"] + ") ->", resultado)
+        esSustitucion = (not d["extremo"]
+                         and len(d["baseW"]) == 1 and len(d["baseT"]) == 1
+                         and d["baseW"] != "-" and d["baseT"] != "-")
+
+        if not esSustitucion:
+            # indel o extremo: no tiene sentido traducirlo por marcos
+            print(d["posW"], "|", d["baseW"], "->", d["baseT"], "| indel/extremo")
+            print()
+            continue
+
+        desfase = d["posT"] - d["posW"]   # mismo codon en Texas
+
+        for frame in range(3):
+            ic = d["posW"] - ((d["posW"] - frame) % 3)
+            it = ic + desfase
+            if ic < 0 or it < 0:
+                continue
+
+            codonW = wuhan[ic:ic + 3]
+            codonT = texas[it:it + 3]
+            if len(codonW) != 3 or len(codonT) != 3:
+                continue
+
+            aaW = tabla.get(codonW, "X")
+            aaT = tabla.get(codonT, "X")
+
+            print(d["posW"], "|", d["baseW"] + "->" + d["baseT"], "| frame", frame, "|",
+                  codonW + "(" + aaW + ")", "->", codonT + "(" + aaT + ")")
         print()
 def cadenaMasLargaAlineada(wuhan,texas,diferencias):
     #Se busca la cadena consecutiva mas larga sin diferencias considerando que el alineamiento ya fue calculado
@@ -850,7 +872,7 @@ def ejecutarComparacion(wuhan,texas,genes,proteinas,traducciones,tablaCodones,k,
     for diferencia in diferencias:
         analizarDiferencia(diferencia,wuhan,texas,posicionesGenes,rangos,tablaCodones)
 
-    mostrarDiferencias(diferencias)
+    mostrarDiferencias(diferencias, wuhan, texas, tablaCodones)
     cadenaMasLargaAlineada(wuhan,texas, diferencias)
 
 
